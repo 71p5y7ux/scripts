@@ -1,0 +1,75 @@
+#!/usr/bin/bash
+
+#Prints the exit message
+exitMessage(){
+  echo "=========================================="
+  echo "Thank you for using Tipsy Tux's Bandit Script"
+}
+#Adds the password to the password file
+setPassword(){
+  level=$1
+  read -p "Enter the password: " passwd
+  exit | sshpass -p $passwd  ssh bandit$level@bandit.labs.overthewire.org -p 2220 &> /dev/null
+  if [ $? -eq 0 ];then
+    echo $passwd >> $passwdfile
+    echo "Congratulations !!"
+  else
+    echo "Not quite right ..."
+  fi
+  exitMessage
+}
+
+#Prints the welcome message
+echo "Welcome to Bandit Labs Script by Tipsy Tux"
+echo "=========================================="
+#Check if sshpass exists
+sshpass &> /dev/null
+if [ $? -eq 0 ]; then
+  #Check if passwd file exists etc ...
+  if [[ -z "${passwdfile}" ]];then
+    echo "Password file does not exist"
+    echo "Add 'export passwdfile=/path/to/file' to .bashrc "
+    exitMessage
+    exit 1
+  else
+    #The password file was found from the environment
+    if [ "$#" -eq 1 ]; then
+      level=$1
+      line="$((level + 1))"
+      passwd=`cat $passwdfile | awk "NR==$line{print}"`
+      # If password was not found in the file, then you can either add the new password or exit right away
+      if [ -z $passwd ]
+      then
+        read -r -p "No passwd yet, do you want to add the password ? [y/N] " response
+        if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
+        then
+          setPassword $level
+        else
+          exitMessage
+        fi
+      else
+        sshpass -p $passwd  ssh bandit$level@bandit.labs.overthewire.org -p 2220
+        if [ $? -eq 0 ];then
+          read -r -p "Were you able to crack the challenge ? [y/N] " response
+          if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
+          then
+            setPassword "$((level + 1))"
+          else
+            exitMessage
+          fi
+        else
+          echo "The password is wrong in the file, that means someone has modified the password file"
+          exitMessage
+          exit 1
+        fi
+      fi
+    else
+      echo "Usage: ./bandit level" >&2
+      exit 1
+    fi
+  fi
+else
+  echo "Install sshpass using the command 'sudo apt-get install sshpass'"
+  exitMessage
+  exit 1
+fi
