@@ -11,8 +11,13 @@ setPassword(){
   read -p "Enter the password: " passwd
   exit | sshpass -p $passwd  ssh bandit$level@bandit.labs.overthewire.org -p 2220 &> /dev/null
   if [ $? -eq 0 ];then
-    echo $passwd >> $passwdfile
-    echo "Congratulations !!"
+    existingLines=`awk 'END{print NR}' $passwdfile`
+    if [ $level -eq $existingLines ];then
+      echo $passwd >> $passwdfile
+      echo "Congratulations !!"
+    else
+      echo "You have entered an older password"
+    fi
   else
     echo "Not quite right ..."
   fi
